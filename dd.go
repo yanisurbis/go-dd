@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -29,7 +30,7 @@ func parseArgs() *Args {
 
 func validateArgs(args *Args) {
 	if args.From == "" {
-		log.Fatal("Please specify `from` argument.")
+		log.Fatal("Please specify `from` argument")
 	} else if args.To == "" {
 		log.Fatal("Please specify `to` argument")
 	} else if args.Limit < 0 {
@@ -39,46 +40,54 @@ func validateArgs(args *Args) {
 	}
 }
 
-func Copy(args *Args) error {
+func Copy(src io.ReadSeeker, dest io.Writer, offset int, limit int) (int, error) {
+	var srcReader io.Reader = src
+
+	if offset != 0 {
+		_, err := src.Seek(int64(offset), 0)
+		srcReader = src
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	if limit != 0 {
+		srcReader = io.LimitReader(srcReader, int64(limit))
+	}
+
+	written, err := io.Copy(dest, srcReader)
+	if err != nil {
+		return 0, err
+	}
+	return int(written), nil
+}
+
+func CopyFiles(args *Args) (int, error) {
 	source, err := os.Open(args.From)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer source.Close()
 
-	dst, err := os.OpenFile(args.To, os.O_WRONLY, 0644)
+	dest, err := os.OpenFile(args.To, os.O_WRONLY, 0644)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	defer source.Close()
+	defer dest.Close()
 
-	sourceReader, err := func() (io.Reader, error) {
-		if args.Offset != 0 {
-			_, err := source.Seek(int64(args.Offset), 0)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if args.Limit != 0 {
-			return io.LimitReader(source, int64(args.Limit)), nil
-		}
-
-		return source, nil
-	}()
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(dst, sourceReader)
-	return err
+	return Copy(source, dest, args.Offset, args.Limit)
 }
 
 func main() {
 	args := parseArgs()
 	validateArgs(args)
-	err := Copy(args)
+	bytesWritten, err := CopyFiles(args)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("Copied bytes: %s\n", bytesWritten)
+	//var dest = make([]byte, 100)
+	//var buffer = bytes.NewBuffer(dest)
+	//err = Copy(args, bytes.NewReader([]byte("Hello World!Hello World!")), buffer)
+	//fmt.Printf("%v", buffer)
 }
