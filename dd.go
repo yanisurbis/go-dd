@@ -78,6 +78,7 @@ func CopyFiles(args *Args) (int, error) {
 	return Copy(source, dest, args.Offset, args.Limit)
 }
 
+// -from /files/source.txt -to /files/dest.txt -offset 6 -limit 3
 func main() {
 	args := parseArgs()
 	validateArgs(args)
@@ -85,9 +86,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Copied bytes: %s\n", bytesWritten)
-	//var dest = make([]byte, 100)
-	//var buffer = bytes.NewBuffer(dest)
-	//err = Copy(args, bytes.NewReader([]byte("Hello World!Hello World!")), buffer)
-	//fmt.Printf("%v", buffer)
+	fmt.Printf("Copied bytes: %v\n", bytesWritten)
 }

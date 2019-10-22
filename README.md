@@ -1,3 +1,7 @@
 # `dd` in go
 
-- usage example: `godd -from source.txt -to dest.txt -offset 1024 -limit 2048`
+- usage example: 
+```cmd
+go build
+./go-dd -from ./files/source.txt -to ./files/dest.txt -offset 6 -limit 6
+```
