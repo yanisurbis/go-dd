@@ -1,4 +1,4 @@
-module "https://github.com/yanisurbis/go-dd.git"
+module go-dd
 
 go 1.12
 
