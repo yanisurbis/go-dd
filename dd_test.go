@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-
 func TestCopy(t *testing.T) {
 	t.Run("copying with offset and limit works", func(t *testing.T) {
 		var destBuffer = new(bytes.Buffer)
@@ -22,16 +21,11 @@ func TestCopy(t *testing.T) {
 	})
 }
 
-func updateFilesContent(srcPath string, destPath string, srcContent string) error {
-	err := ioutil.WriteFile(srcPath, []byte(srcContent), 0755)
+func updateFileContent(t *testing.T, path string, content string) {
+	err := ioutil.WriteFile(path, []byte(content), 0755)
 	if err != nil {
-		return err
+		t.Errorf(err.Error())
 	}
-	err = ioutil.WriteFile(destPath, []byte(""), 0755)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func getStringFromFile(t *testing.T, pathDest string) string {
@@ -42,56 +36,72 @@ func getStringFromFile(t *testing.T, pathDest string) string {
 	return string(buf)
 }
 
+const (
+	PathSrc = "./files/source.txt"
+	PathSrc1 = "./files/source1.txt"
+	PathDest = "./files/dest.txt"
+)
+
 func TestCopyFiles(t *testing.T) {
 	t.Run("copying files with offset and limit works", func(t *testing.T) {
-		srcPath := "./files/source.txt"
-		srcDest := "./files/dest.txt"
-		srcContent := "Hello World! Happy New Year!"
-
-		err := updateFilesContent(srcPath, srcDest, srcContent)
-		if err != nil {
-			t.Errorf(err.Error())
-		}
+		updateFileContent(t, PathSrc, "Hello World! Happy New Year!")
 
 		written, err := CopyFiles(&Args{
-			From:   srcPath,
-			To:     srcDest,
+			From:   PathSrc,
+			To:     PathDest,
 			Offset: 13,
 			Limit:  9,
 		})
 
 		assert.Nil(t, err)
 		assert.Equal(t, 9, written)
-		assert.Equal(t, "Happy New", getStringFromFile(t, srcDest))
+		assert.Equal(t, "Happy New", getStringFromFile(t, PathDest))
 	})
 
 	t.Run("copying fails when source is absent", func(t *testing.T) {
-		pathDest := "./files/dest.txt"
-
 		_, err := CopyFiles(&Args{
 			From:   "xxx",
-			To:     pathDest,
-			Offset: 13,
-			Limit:  9,
+			To:     PathDest,
+			Offset: 0,
+			Limit:  0,
 		})
 
 		assert.NotNil(t, err)
 	})
 
 	t.Run("copying works when destination file is absent", func(t *testing.T) {
-		pathSrc := "./files/source.txt"
-		pathDestNotExist := "./files/dest-" + funk.RandomString(16)
+		updateFileContent(t, PathSrc, "Hello!")
+		pathDestNotExist := PathDest + funk.RandomString(16) + ".txt"
 
-		written, err := CopyFiles(&Args{
-			From:   pathSrc,
+		_, err := CopyFiles(&Args{
+			From:   PathSrc,
 			To:     pathDestNotExist,
-			Offset: 13,
-			Limit:  9,
+			Offset: 0,
+			Limit:  0,
 		})
 
 		assert.Nil(t, err)
-		assert.Equal(t, 9, written)
-		assert.Equal(t, "Happy New", getStringFromFile(t, pathDestNotExist))
+		assert.Equal(t, "Hello!", getStringFromFile(t, pathDestNotExist))
+	})
+
+	t.Run("reset destination file content before copying", func(t *testing.T) {
+		updateFileContent(t, PathSrc, "Hello!")
+		_, _ = CopyFiles(&Args{
+			From:   PathSrc,
+			To:     PathDest,
+			Offset: 0,
+			Limit:  0,
+		})
+		assert.Equal(t, "Hello!", getStringFromFile(t, PathDest))
+
+		updateFileContent(t, PathSrc1, "Bye!")
+		_, _ = CopyFiles(&Args{
+			From:   PathSrc1,
+			To:     PathDest,
+			Offset: 0,
+			Limit:  0,
+		})
+		assert.Equal(t, "Bye!", getStringFromFile(t, PathDest))
 	})
 }
 
