@@ -71,7 +71,14 @@ func CopyFiles(args *Args) (int, error) {
 
 	dest, err := os.OpenFile(args.To, os.O_WRONLY, 0644)
 	if err != nil {
-		return 0, err
+		if os.IsNotExist(err) {
+			dest, err = os.Create(args.To)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			return 0, err
+		}
 	}
 	defer dest.Close()
 

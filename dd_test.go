@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
+	"github.com/thoas/go-funk"
 	"io/ioutil"
 	"testing"
 )
@@ -33,6 +34,14 @@ func updateFilesContent(srcPath string, destPath string, srcContent string) erro
 	return nil
 }
 
+func getStringFromFile(t *testing.T, pathDest string) string {
+	buf, err := ioutil.ReadFile(pathDest)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	return string(buf)
+}
+
 func TestCopyFiles(t *testing.T) {
 	t.Run("copying files with offset and limit works", func(t *testing.T) {
 		srcPath := "./files/source.txt"
@@ -53,36 +62,36 @@ func TestCopyFiles(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.Equal(t, 9, written)
-
-		buf, err := ioutil.ReadFile(srcDest)
-		if err != nil {
-			t.Errorf(err.Error())
-		}
-
-		assert.Equal(t, "Happy New", string(buf))
+		assert.Equal(t, "Happy New", getStringFromFile(t, srcDest))
 	})
 
-	t.Run("copying fails when one of the files is absent", func(t *testing.T) {
-		srcPath := "./files/source.txt"
-		srcDest := "./files/dest.txt"
+	t.Run("copying fails when source is absent", func(t *testing.T) {
+		pathDest := "./files/dest.txt"
 
 		_, err := CopyFiles(&Args{
 			From:   "xxx",
-			To:     srcDest,
+			To:     pathDest,
 			Offset: 13,
 			Limit:  9,
 		})
 
 		assert.NotNil(t, err)
+	})
 
-		_, err = CopyFiles(&Args{
-			From:   srcPath,
-			To:     "xxx",
+	t.Run("copying works when destination file is absent", func(t *testing.T) {
+		pathSrc := "./files/source.txt"
+		pathDestNotExist := "./files/dest-" + funk.RandomString(16)
+
+		written, err := CopyFiles(&Args{
+			From:   pathSrc,
+			To:     pathDestNotExist,
 			Offset: 13,
 			Limit:  9,
 		})
 
-		assert.NotNil(t, err)
+		assert.Nil(t, err)
+		assert.Equal(t, 9, written)
+		assert.Equal(t, "Happy New", getStringFromFile(t, pathDestNotExist))
 	})
 }
 
